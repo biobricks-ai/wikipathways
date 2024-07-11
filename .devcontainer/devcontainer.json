@@ -1,25 +1,26 @@
 {
-    "name": "SMRT Development Container",
-    "build": {
-        "dockerfile": "Dockerfile",
-        "context": "..",
-        "args": {
-            "BIOBRICKS_TOKEN": "${localEnv:BIOBRICKS_PUBLIC_TOKEN}"
-        }
-    },
-    "features": {
-        "ghcr.io/devcontainers/features/docker-in-docker:1": {}
-    },
-    "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "python.pythonPath": "/usr/local/bin/python"
-    },
-    "extensions": [
-        "ms-python.python",
-        "ms-toolsai.jupyter",
-        "ms-vsliveshare.vsliveshare",  // Live Share extension
-        "github.copilot",  // GitHub Copilot extension
-        "insilica.vscode-pycmd"
-    ],
-    "remoteUser": "vscode"
+  "name": "SMRT Development Container",
+  "build": {
+      "dockerfile": "Dockerfile",
+      "context": "..",
+      "args": {
+          "BIOBRICKS_TOKEN": "${localEnv:BIOBRICKS_PUBLIC_TOKEN}"
+      }
+  },
+  "features": {
+      "ghcr.io/devcontainers/features/docker-in-docker:1": {}
+  },
+  "settings": {
+      "terminal.integrated.defaultProfile.linux": "bash",
+      "python.pythonPath": "/usr/local/bin/python"
+  },
+  "extensions": [
+      "ms-python.python",
+      "ms-toolsai.jupyter",
+      "ms-vsliveshare.vsliveshare",
+      "github.copilot",
+      "insilica.vscode-pycmd"
+  ],
+  "remoteUser": "vscode",
+  "postCreateCommand": ".devcontainer/setup_biobricks.sh"
 }
