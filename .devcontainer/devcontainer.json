@@ -2,9 +2,9 @@
     "name": "SMRT Development Container",
     "build": {
         "dockerfile": "Dockerfile",
-        "context": ".",
+        "context": "..",
         "args": {
-            "BIOBRICKS_TOKEN": "${localEnv:BIOBRICKS_TOKEN}"
+            "BIOBRICKS_TOKEN": "${localEnv:BIOBRICKS_PUBLIC_TOKEN}"
         }
     },
     "features": {
