@@ -42,8 +42,8 @@ USER vscode
 COPY .devcontainer/requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
-# Accept build argument for BIOBRICKS_TOKEN
-ARG BIOBRICKS_TOKEN
+# Accept build argument for BIOBRICKS_TOKEN & use the public token if not provided
+ARG BIOBRICKS_TOKEN=VQF6Q2U-NKktZ31ioVYa9w
 
 # Install biobricks and configure it
 RUN /bin/bash -c 'source /etc/bash.bashrc && pipx install biobricks && biobricks version' \
