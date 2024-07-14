@@ -21,6 +21,5 @@
       "github.copilot",
       "insilica.vscode-pycmd"
   ],
-  "remoteUser": "vscode",
-  "postCreateCommand": ".devcontainer/setup_biobricks.sh"
+  "remoteUser": "vscode"
 }
