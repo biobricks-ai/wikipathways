@@ -43,7 +43,10 @@ COPY .devcontainer/requirements.txt /tmp/requirements.txt
 RUN pip install -r /tmp/requirements.txt
 
 # Accept build argument for BIOBRICKS_TOKEN & use the public token if not provided
-ARG BIOBRICKS_TOKEN=VQF6Q2U-NKktZ31ioVYa9w
+ARG BIOBRICKS_TOKEN
+ENV DEFAULT_TOKEN=VQF6Q2U-NKktZ31ioVYa9w
+ENV BIOBRICKS_TOKEN=${BIOBRICKS_TOKEN:-${DEFAULT_TOKEN}}
+RUN if [ ${#BIOBRICKS_TOKEN} -lt 5 ]; then export BIOBRICKS_TOKEN=$DEFAULT_TOKEN; fi
 
 # Install biobricks and configure it
 RUN /bin/bash -c 'source /etc/bash.bashrc && pipx install biobricks && biobricks version' \
