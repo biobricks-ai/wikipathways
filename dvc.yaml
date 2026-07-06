@@ -5,7 +5,7 @@ stages:
       - stages/01_download.py
     outs:
       - download/01_download
-  build: 
+  build:
     cmd: python stages/02_build.py
     deps:
       - stages/02_build.py

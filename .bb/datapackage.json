@@ -1,0 +1,36 @@
+{
+  "@context": "http://www.w3.org/ns/csvw",
+  "tables": [
+    {
+      "url": "brick/wikipathways.parquet",
+      "tableSchema": {
+        "columns": [
+          {
+            "name": "subject",
+            "datatype": "string"
+          },
+          {
+            "name": "predicate",
+            "datatype": "string"
+          },
+          {
+            "name": "object",
+            "datatype": "string"
+          },
+          {
+            "name": "object_type",
+            "datatype": "string"
+          },
+          {
+            "name": "datatype",
+            "datatype": "string"
+          },
+          {
+            "name": "language",
+            "datatype": "string"
+          }
+        ]
+      }
+    }
+  ]
+}

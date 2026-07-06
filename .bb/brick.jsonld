@@ -1,0 +1,9 @@
+{
+  "@context": {"@vocab":"https://brickyard.biobricks.ai/ns#","dcterms":"http://purl.org/dc/terms/","prov":"http://www.w3.org/ns/prov#"},
+  "@type": "dcat:Dataset",
+  "@id": "https://brickyard.biobricks.ai/brick/wikipathways",
+  "dcterms:title": "WikiPathways RDF",
+  "dcterms:description": "WikiPathways curated biological pathways as an RDF triples table (subject,predicate,object,object_type,datatype,language). 10,814,460 triples.",
+  "dcterms:license": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "prov:wasDerivedFrom": {"@id": "https://www.wikipathways.org/"}
+}

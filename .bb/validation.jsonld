@@ -1,0 +1,70 @@
+{
+  "@context": {
+    "schema": "https://schema.org/",
+    "prov": "http://www.w3.org/ns/prov#"
+  },
+  "@type": "prov:Entity",
+  "schema:name": "wikipathways validation report",
+  "prov:generatedAtTime": "2026-07-06T11:15:15Z",
+  "bb:validator": "tools/bb_validate.py",
+  "bb:verdict": "PASS",
+  "bb:summary": {
+    "n_parquet_files": 1,
+    "total_rows": 10814460,
+    "total_bytes": 109744240,
+    "note": ""
+  },
+  "bb:deterministic_checks": [
+    {
+      "file": "wikipathways.parquet",
+      "path": "wikipathways/brick/wikipathways.parquet",
+      "rows": 10814460,
+      "cols": 6,
+      "bytes": 109744240,
+      "columns": [
+        {
+          "name": "subject",
+          "type": "string"
+        },
+        {
+          "name": "predicate",
+          "type": "string"
+        },
+        {
+          "name": "object",
+          "type": "string"
+        },
+        {
+          "name": "object_type",
+          "type": "string"
+        },
+        {
+          "name": "datatype",
+          "type": "string"
+        },
+        {
+          "name": "language",
+          "type": "string"
+        }
+      ],
+      "null_fraction": {
+        "subject": 0.0,
+        "predicate": 0.0,
+        "object": 0.0,
+        "object_type": 0.0,
+        "datatype": 0.763626,
+        "language": 0.999812
+      },
+      "all_null_columns": [],
+      "sample_rows": 50000,
+      "sample_dup_fraction": 0.0123,
+      "sample_constant_columns": [
+        "datatype"
+      ],
+      "warnings": [],
+      "status": "PASS"
+    }
+  ],
+  "bb:datapackage_conformance": null,
+  "bb:web_validation": null
+}

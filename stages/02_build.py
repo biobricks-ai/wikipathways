@@ -1,87 +1,120 @@
-import os, shutil, tqdm, zipfile
-from rdflib import Graph
-import subprocess
-from hdt import HDTDocument
+import os, sys, zipfile, time
+import rdflib
+from rdflib import Graph, URIRef, Literal, BNode
+import pyarrow as pa
+import pyarrow.parquet as pq
 
-# SETUP ===========================================================
+# BUILD: parse WikiPathways RDF (TTL) directly into a streaming triples parquet.
+# Replaces the former rdf2hdt HDT build (rdf2hdt C++ tool not installed).
+# Columns: subject, predicate, object, object_type, datatype, language
+# Memory-bounded: each per-pathway TTL is parsed into a small graph, rows are
+# buffered and flushed to a single ParquetWriter in batches.
+
 base_path = os.getcwd()
-download_path = os.path.join(base_path, "download", "01_download")
-rdf_files_path = os.path.join(download_path, "rdf")
-unzipped_files_path = os.path.join(rdf_files_path, "unzipped")
-ttl_files_path = os.path.join(rdf_files_path, "ttl_files")
-nt_files_path = os.path.join(rdf_files_path, "nt_files")
+rdf_dir = os.path.join(base_path, "download", "01_download", "rdf")
+brick_dir = os.path.join(base_path, "brick")
+os.makedirs(brick_dir, exist_ok=True)
 
-# BUILD BRICK ======================================================
-for path in [unzipped_files_path, ttl_files_path, nt_files_path]:
-    os.makedirs(path, exist_ok=True)
+# Remove stale HDT artifacts from the previous (broken) build
+for stale in ("wikipathways.hdt", "wikipathways.hdt.index.v1-1"):
+    p = os.path.join(brick_dir, stale)
+    if os.path.exists(p):
+        os.remove(p)
 
-# Step 1: Unzip files and collect all TTL files
-rdf_zip_files = [f for f in os.listdir(rdf_files_path) if f.endswith('.zip')]
+out_path = os.path.join(brick_dir, "wikipathways.parquet")
 
-for rdf_file in rdf_zip_files:
-    with zipfile.ZipFile(os.path.join(rdf_files_path, rdf_file), 'r') as zip_ref:
-        zip_ref.extractall(unzipped_files_path)
+SCHEMA = pa.schema([
+    ("subject", pa.string()),
+    ("predicate", pa.string()),
+    ("object", pa.string()),
+    ("object_type", pa.string()),   # uri | literal | bnode
+    ("datatype", pa.string()),
+    ("language", pa.string()),
+])
 
-# Move all TTL files to ttl_files directory
-for root, _, files in os.walk(unzipped_files_path):
-    for file in files:
-        if file.endswith('.ttl'):
-            _ = shutil.move(os.path.join(root, file), os.path.join(ttl_files_path, file))
+zip_specs = [
+    ("wikipathways-20240610-rdf-wp.zip", "wp"),
+    ("wikipathways-20240610-rdf-gpml.zip", "gpml"),
+    ("wikipathways-20240610-rdf-authors.zip", "authors"),
+]
 
-# Step 2: Convert TTL to NT
-for ttl_file in tqdm.tqdm(os.listdir(ttl_files_path), desc="Converting TTL to NT"):
-    if ttl_file.endswith('.ttl'):
-        g = Graph()
-        _ = g.parse(os.path.join(ttl_files_path, ttl_file), format='turtle')
-        nt_file = ttl_file.rsplit('.', 1)[0] + '.nt'
-        _ = g.serialize(os.path.join(nt_files_path, nt_file), format='nt')
+BATCH = 500_000
+writer = pq.ParquetWriter(out_path, SCHEMA, compression="zstd")
 
-# Step 3: Concatenate all NT files
-big_nt_file = os.path.join(rdf_files_path, "combined.nt")
-with open(big_nt_file, 'wb') as outfile:
-    for nt_file in tqdm.tqdm(os.listdir(nt_files_path), desc="Concatenating NT files"):
-        if nt_file.endswith('.nt'):
-            with open(os.path.join(nt_files_path, nt_file), 'rb') as infile:
-                _ = shutil.copyfileobj(infile, outfile)
+buf_s, buf_p, buf_o, buf_ot, buf_dt, buf_lang = [], [], [], [], [], []
+total = 0
+n_files = 0
 
-# Step 4: Convert NT to HDT
-base_uri = "http://rdf.wikipathways.org/"
-hdt_file = os.path.join("./brick", "wikipathways.hdt")
-os.makedirs("./brick", exist_ok=True)
 
-# Use subprocess to run rdf2hdt command
-cmd = f"rdf2hdt -i -p -B {base_uri} {big_nt_file} {hdt_file}"
-subprocess.run(cmd, shell=True, check=True)
+def flush():
+    global buf_s, buf_p, buf_o, buf_ot, buf_dt, buf_lang
+    if not buf_s:
+        return
+    tbl = pa.table({
+        "subject": pa.array(buf_s, type=pa.string()),
+        "predicate": pa.array(buf_p, type=pa.string()),
+        "object": pa.array(buf_o, type=pa.string()),
+        "object_type": pa.array(buf_ot, type=pa.string()),
+        "datatype": pa.array(buf_dt, type=pa.string()),
+        "language": pa.array(buf_lang, type=pa.string()),
+    }, schema=SCHEMA)
+    writer.write_table(tbl)
+    buf_s, buf_p, buf_o, buf_ot, buf_dt, buf_lang = [], [], [], [], [], []
 
-print(f"HDT file created at: {hdt_file}")
 
-# TESTING ===========================================================
+def term_str(t, bnode_prefix):
+    # Return (value, type, datatype, language)
+    if isinstance(t, URIRef):
+        return str(t), "uri", None, None
+    if isinstance(t, BNode):
+        # namespace blank nodes per source file to avoid cross-file id collisions
+        return f"_:{bnode_prefix}_{str(t)}", "bnode", None, None
+    if isinstance(t, Literal):
+        dt = str(t.datatype) if t.datatype is not None else None
+        lang = t.language if t.language else None
+        return str(t), "literal", dt, lang
+    return str(t), "literal", None, None
 
-print("Testing the HDT file...")
 
-# Load the HDT file
-document = HDTDocument(hdt_file)
+t0 = time.time()
+for zname, kind in zip_specs:
+    zpath = os.path.join(rdf_dir, zname)
+    if not os.path.exists(zpath):
+        print(f"WARN missing {zpath}, skipping", flush=True)
+        continue
+    with zipfile.ZipFile(zpath) as zf:
+        names = [n for n in zf.namelist() if n.endswith(".ttl")]
+        print(f"{kind}: {len(names)} ttl files", flush=True)
+        for i, name in enumerate(names):
+            data = zf.read(name)
+            stem = os.path.splitext(os.path.basename(name))[0]
+            bnode_prefix = f"{kind}_{stem}"
+            g = Graph()
+            try:
+                g.parse(data=data, format="turtle")
+            except Exception as e:
+                print(f"WARN parse fail {name}: {e}", flush=True)
+                continue
+            for s, p, o in g:
+                sv, _, _, _ = term_str(s, bnode_prefix)
+                pv = str(p)
+                ov, ot, dt, lang = term_str(o, bnode_prefix)
+                buf_s.append(sv)
+                buf_p.append(pv)
+                buf_o.append(ov)
+                buf_ot.append(ot)
+                buf_dt.append(dt)
+                buf_lang.append(lang)
+                total += 1
+            n_files += 1
+            if len(buf_s) >= BATCH:
+                flush()
+            if (i + 1) % 500 == 0:
+                print(f"  {kind} {i+1}/{len(names)} files, {total} triples, "
+                      f"{round(time.time()-t0)}s", flush=True)
 
-# Test 1: Check if the file is not empty
-total_triples = document.total_triples
-assert total_triples > 0, "HDT file is empty"
-print(f"Total triples: {total_triples}")
-
-# Test 2: Check if we can perform a basic search
-triples, cardinality = document.search_triples("", "", "")
-assert cardinality > 0, "No triples found in basic search"
-print(f"Cardinality of basic search: {cardinality}")
-
-# Test 3: Check for a specific WikiPathways predicate
-wp_predicate = "http://vocabularies.wikipathways.org/wp#organism"
-triples, cardinality = document.search_triples("", wp_predicate, "")
-assert cardinality > 0, f"No triples found with predicate {wp_predicate}"
-print(f"Triples with WikiPathways organism predicate: {cardinality}")
-
-print("All tests passed successfully!")
-
-# CLEAN UP ===========================================================
-shutil.rmtree(unzipped_files_path)
-shutil.rmtree(ttl_files_path)
-shutil.rmtree(nt_files_path)
-os.remove(big_nt_file)
+flush()
+writer.close()
+print(f"DONE: {total} triples from {n_files} files -> {out_path} "
+      f"({round(time.time()-t0)}s)", flush=True)
+print(f"parquet size: {os.path.getsize(out_path)} bytes", flush=True)

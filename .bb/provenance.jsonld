@@ -1,0 +1,5 @@
+{
+  "@context": {"prov":"http://www.w3.org/ns/prov#","dcterms":"http://purl.org/dc/terms/"},
+  "@type": "prov:Entity", "@id": "https://brickyard.biobricks.ai/brick/wikipathways",
+  "prov:wasDerivedFrom": {"@id":"https://www.wikipathways.org/","dcterms:description":"WikiPathways RDF export, stream-parsed to a parquet triples table."}
+}
