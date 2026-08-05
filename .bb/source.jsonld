@@ -1,0 +1,42 @@
+{
+  "@context": "../../context/source.context.jsonld",
+  "@type": "dcat:Dataset",
+  "@id": "https://biobricks.ai/bricks/wikipathways",
+  "dcterms:title": "WikiPathways RDF",
+  "dcterms:description": "WikiPathways curated biological pathways converted to an RDF triples table (subject, predicate, object). Built from the WikiPathways monthly data release downloaded from data.wikipathways.org/current/ (the RDF distribution at rdf.wikipathways.org). WikiPathways is an open, community-curated pathway database.",
+  "dcterms:license": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "biobricks:licenseName": "CC0 1.0",
+  "biobricks:licenseClass": "open",
+  "biobricks:merckCommercialUse": "permitted",
+  "dcterms:publisher": "WikiPathways",
+  "dcterms:identifier": "https://www.wikipathways.org/",
+  "biobricks:licenseEvidence": [
+    {
+      "source": ".bb/brick.jsonld",
+      "quote": "\"dcterms:license\": \"https://creativecommons.org/publicdomain/zero/1.0/\"",
+      "confidence": "medium"
+    },
+    {
+      "source": "stages/01_download.py",
+      "quote": "base_url = \"https://data.wikipathways.org/current/\"",
+      "confidence": "high"
+    },
+    {
+      "source": "https://www.wikipathways.org/ (WikiPathways licensing policy)",
+      "quote": "WikiPathways releases all of its content under the Creative Commons CC0 1.0 Universal (public-domain) waiver; the WikiPathways license page could not be fetched directly (HTTP 403) but the CC0 policy is the long-standing, documented WikiPathways licensing model.",
+      "confidence": "medium"
+    }
+  ],
+  "biobricks:reviewed": false,
+  "biobricks:reviewNotes": "Determined by annotation agent (Claude Opus 4.8) for Schedule A. Upstream is the WikiPathways monthly data release (data.wikipathways.org/current/, RDF at rdf.wikipathways.org). WikiPathways distributes all content under CC0 1.0, which the brick's own .bb/brick.jsonld already declares. Direct fetch of the WikiPathways license page returned HTTP 403, so the CC0 determination rests on the brick declaration plus WikiPathways' well-documented CC0 policy (confidence medium). HUMAN REVIEW: confirm CC0 on the current WikiPathways license/terms page before treating as authoritative.",
+  "prov:wasDerivedFrom": [
+    {
+      "@type": "dcat:Dataset",
+      "@id": "https://www.wikipathways.org/",
+      "dcterms:title": "WikiPathways monthly RDF data release",
+      "dcterms:license": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "dcat:downloadURL": "https://data.wikipathways.org/current/",
+      "dcterms:publisher": "WikiPathways"
+    }
+  ]
+}
